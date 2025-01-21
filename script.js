@@ -5,6 +5,8 @@ let gameBoard = Array(ROWS)
   .fill()
   .map(() => Array(COLS).fill(null));
 let gameActive = true;
+let timer;
+let timeLeft = 10;
 
 function createBoard() {
   const board = document.getElementById("board");
@@ -13,14 +15,40 @@ function createBoard() {
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       const cell = document.createElement("div");
-      cell.className = `cell ${gameBoard[row][col] || ""} ${
-        gameActive && currentPlayer === "red" ? "hover-red" : ""
-      }`;
+      cell.className = `cell ${gameBoard[row][col] || ""}`;
       cell.dataset.col = col;
       cell.onclick = () => makeMove(col);
       board.appendChild(cell);
     }
   }
+}
+
+function startTimer() {
+  timeLeft = 10;
+  updateTimerDisplay();
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (!gameActive) {
+      clearInterval(timer);
+      return;
+    }
+
+    timeLeft--;
+    updateTimerDisplay();
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      if (currentPlayer === "red") {
+        document.querySelector(".status").textContent = "Time's up! AI's Turn...";
+        setTimeout(makeAIMove, 500);
+      }
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const timerElement = document.querySelector(".timer");
+  timerElement.textContent = `Time Left: ${timeLeft}s`;
 }
 
 function findLowestEmptyRow(col) {
@@ -42,9 +70,11 @@ function makeMove(col) {
     if (checkWin(row, col)) {
       document.querySelector(".status").textContent = `You Win!`;
       gameActive = false;
+      clearInterval(timer);
     } else if (checkDraw()) {
       document.querySelector(".status").textContent = "It's a Draw!";
       gameActive = false;
+      clearInterval(timer);
     } else {
       currentPlayer = "yellow";
       document.querySelector(".status").textContent = "AI is thinking...";
@@ -74,6 +104,7 @@ function makeAIMove() {
     } else {
       currentPlayer = "red";
       document.querySelector(".status").textContent = "Your Turn (Red)";
+      startTimer();
     }
 
     createBoard();
@@ -105,13 +136,6 @@ function findBestMove() {
     }
   }
 
-  // Prefer center column
-  const centerCol = 3;
-  if (findLowestEmptyRow(centerCol) >= 0) {
-    return centerCol;
-  }
-
-  // Try to build from existing pieces
   const validMoves = [];
   for (let col = 0; col < COLS; col++) {
     if (findLowestEmptyRow(col) >= 0) {
@@ -119,7 +143,6 @@ function findBestMove() {
     }
   }
 
-  // Randomly choose from valid moves
   return validMoves[Math.floor(Math.random() * validMoves.length)];
 }
 
@@ -128,24 +151,24 @@ function checkWin(row, col) {
     [
       [0, 1],
       [0, -1],
-    ], // horizontal
+    ],
     [
       [1, 0],
       [-1, 0],
-    ], // vertical
+    ],
     [
       [1, 1],
       [-1, -1],
-    ], // diagonal /
+    ],
     [
       [1, -1],
       [-1, 1],
-    ], // diagonal \
+    ],
   ];
 
   return directions.some((direction) => {
     const count =
-      1 + // Count the current piece
+      1 +
       countDirection(row, col, direction[0][0], direction[0][1]) +
       countDirection(row, col, direction[1][0], direction[1][1]);
     return count >= 4;
@@ -185,10 +208,8 @@ function resetGame() {
   gameActive = true;
   document.querySelector(".status").textContent = "Your Turn (Red)";
   createBoard();
+  startTimer();
 }
 
 createBoard();
-
-function github_open() {
-  window.open("https://github.com/PrasanthYT/CF_Game", "_blank");
-}
+startTimer();
